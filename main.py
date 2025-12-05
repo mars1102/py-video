@@ -135,6 +135,54 @@ def process_folder_videos(folder_path, target_duration):
     print(f"输出文件夹: {output_folder}")
 
 
+def parse_time_to_seconds(time_str):
+    """
+    将时间字符串转换为秒数（浮点数）
+    支持格式: 00:00:00,050 或 00:00:00.050
+    """
+    time_str = time_str.strip()
+    # 将逗号替换为点，统一处理
+    time_str = time_str.replace(',', '.')
+
+    # 分割时分秒和毫秒
+    try:
+        # 分割时:分:秒.毫秒
+        time_parts = time_str.split(':')
+        if len(time_parts) == 3:
+            hours = int(time_parts[0])
+            minutes = int(time_parts[1])
+
+            # 处理秒和毫秒
+            seconds_part = time_parts[2]
+            if '.' in seconds_part:
+                seconds, milliseconds = seconds_part.split('.')
+                total_seconds = (hours * 3600 +
+                                 minutes * 60 +
+                                 int(seconds) +
+                                 int(milliseconds) / 1000)
+            else:
+                total_seconds = hours * 3600 + minutes * 60 + float(seconds_part)
+
+            return total_seconds
+        else:
+            raise ValueError(f"时间格式错误: {time_str}")
+
+    except Exception as e:
+        raise ValueError(f"解析时间失败: {time_str}, 错误: {e}")
+
+
+def margeContent(split_content_arr, srt_content_dict):
+    result_arr = []
+    for split_arr in split_content_arr:
+        duration = 0
+        for content in split_arr:
+            cur_dura = srt_content_dict.get(content)
+            if cur_dura:
+                duration += cur_dura
+        result_arr.append(duration)
+    return result_arr
+
+
 def get_duration_dict(srt_file_path, split_path):
     """
     根据字幕文件和分镜文件获取视频目标时长
@@ -157,12 +205,46 @@ def get_duration_dict(srt_file_path, split_path):
                     split_array.append([cleaned_line])
 
     # 字幕
-    srt_dict = {}
+    result = {}
     with open(srt_file_path, 'r', encoding='utf-8') as file:
-        for line in file:
-            cleaned_line = line.strip()
-            # if cleaned_line:
+        content = file.read()
+        # 分割成行
+        lines = content.strip().split('\n')
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            # 跳过空行
+            if not line:
+                i += 1
+                continue
+            # 检查是否以数字开头（序号行）
+            if re.match(r'^\d+$', line):
+                # 检查是否有时间行和中文字符行
+                if i + 2 < len(lines):
+                    time_line = lines[i + 1].strip()
+                    chinese_line = lines[i + 2].strip()
+                    # 验证时间行格式
+                    if '-->' in time_line:
+                        # 提取开始和结束时间
+                        time_parts = time_line.split('-->')
+                        if len(time_parts) == 2:
+                            start_time = time_parts[0].strip()
+                            end_time = time_parts[1].strip()
 
+                            # 计算时间差值
+                            start_seconds = parse_time_to_seconds(start_time)
+                            end_seconds = parse_time_to_seconds(end_time)
+                            time_diff = end_seconds - start_seconds
+
+                            # 将结果添加到字典
+                            result[chinese_line] = float(format(time_diff, '.2f'))
+
+                            # 跳过已处理的行
+                            i += 3
+                            continue
+            i += 3
+    print(result)
+    return margeContent(split_array, result)
 
 
 def main():
