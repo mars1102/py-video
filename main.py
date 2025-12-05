@@ -71,13 +71,13 @@ def adjust_video_to_target_duration(input_path, output_path, target_duration=6):
         return False
 
 
-def process_folder_videos(folder_path, target_duration):
+def process_folder_videos(folder_path, duration_dict):
     """
     处理文件夹中的所有MP4视频文件
 
     参数:
     folder_path: 文件夹路径
-    target_duration: 目标时长(秒)
+    duration_dict: 目标时长数组
     """
     # 支持的视频格式
     video_extensions = ('.mp4', '.MP4')
@@ -105,6 +105,8 @@ def process_folder_videos(folder_path, target_duration):
                 # 生成输出文件名
                 name, ext = os.path.splitext(filename)
                 output_filename = f"{name}{ext}"
+                index = name.split(".")[0]
+                target_duration = duration_dict[int(index)]
                 output_path = os.path.join(output_folder, output_filename)
 
                 # 只有时长小于目标时长的视频才需要处理
@@ -121,7 +123,7 @@ def process_folder_videos(folder_path, target_duration):
                         error_count += 1
                         print(f"✗ 处理失败: {filename}")
                 else:
-                    print(f"视频时长已满足要求，跳过处理")
+                    print(f"字幕时长{target_duration}秒，视频时长已满足要求，跳过处理")
                     # 可选：复制到输出文件夹保持原样
                     # shutil.copy2(input_path, output_path)
 
@@ -206,7 +208,7 @@ def get_duration_dict(srt_file_path, split_path):
 
     # 字幕
     result = {}
-    with open(srt_file_path, 'r', encoding='utf-8') as file:
+    with open(srt_file_path, 'r', encoding='utf-8-sig') as file:
         content = file.read()
         # 分割成行
         lines = content.strip().split('\n')
@@ -237,13 +239,12 @@ def get_duration_dict(srt_file_path, split_path):
                             time_diff = end_seconds - start_seconds
 
                             # 将结果添加到字典
-                            result[chinese_line] = float(format(time_diff, '.2f'))
+                            result[chinese_line] = time_diff
 
                             # 跳过已处理的行
                             i += 3
                             continue
-            i += 3
-    print(result)
+            i += 1
     return margeContent(split_array, result)
 
 
@@ -272,8 +273,6 @@ def main():
 
     duration_dict = get_duration_dict(srt_file_path, split_path)
 
-    print(duration_dict)
-    return
     # 视频文件夹路径
     folder_path = input("请输入视频文件夹(含.[mp4|MP4])路径: ").strip()
 
@@ -291,7 +290,7 @@ def main():
 
     # 处理视频
     try:
-        process_folder_videos(folder_path, target_duration=7.65)
+        process_folder_videos(folder_path, duration_dict)
     except KeyboardInterrupt:
         print("\n用户中断处理")
     except Exception as e:
