@@ -106,7 +106,7 @@ def process_folder_videos(folder_path, duration_dict):
                 name, ext = os.path.splitext(filename)
                 output_filename = f"{name}{ext}"
                 index = name.split(".")[0]
-                target_duration = duration_dict[int(index)]
+                target_duration = duration_dict[int(index)-1]
                 output_path = os.path.join(output_folder, output_filename)
 
                 # 只有时长小于目标时长的视频才需要处理
@@ -175,12 +175,14 @@ def parse_time_to_seconds(time_str):
 
 def margeContent(split_content_arr, srt_content_dict):
     result_arr = []
-    for split_arr in split_content_arr:
+    for index, split_arr in enumerate(split_content_arr):
         duration = 0
         for content in split_arr:
             cur_dura = srt_content_dict.get(content)
             if cur_dura:
                 duration += cur_dura
+        str_c = ",".join(split_arr)
+        print(f"{index} {str_c}: {duration}")
         result_arr.append(duration)
     return result_arr
 
@@ -305,6 +307,6 @@ if __name__ == "__main__":
         main()
     except ImportError:
         print("错误：需要安装moviepy库")
-        print("请运行: pip install moviepy或conda install -c conda-forge moviepy")
+        print("请运行: pip install moviepy==1.0.3或conda install -c conda-forge moviepy")
     except Exception as e:
         print(f"程序初始化错误: {str(e)}")
