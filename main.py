@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 def adjust_video_to_target_duration(input_path, output_path, target_duration=6):
     """
-    将视频调整到目标时长（通过慢速处理）
+    将视频调整到目标时长
 
     参数:
     input_path: 输入视频路径
@@ -17,46 +17,43 @@ def adjust_video_to_target_duration(input_path, output_path, target_duration=6):
         # 读取视频
         with VideoFileClip(input_path) as video:
             original_duration = video.duration
-            print(f"原视频时长: {original_duration:.2f}秒")
 
-            # 如果视频时长已经大于等于目标时长，直接复制
-            if original_duration >= target_duration:
-                print(f"视频时长已达要求，直接复制")
-                video.write_videofile(
+            if original_duration < target_duration:
+                # 计算速度因子：原时长/目标时长
+                speed_factor = original_duration / target_duration
+                print(f"计算得到的速度因子: {speed_factor:.4f}")
+
+                # 检查速度因子是否在有效范围内
+                if speed_factor <= 0:
+                    print(f"速度因子 {speed_factor:.4f} 超出合理范围，视频可能无法正常处理")
+                    return False
+
+                # 放慢视频速度
+                adjusted_video = video.fx(vfx.speedx, factor=speed_factor)
+                print(f"调整后视频的计算时长: {original_duration / speed_factor:.2f}秒")
+                # **关键步骤：根据帧率重新计算精确的持续时间**
+                # 计算目标时长内应包含的总帧数（四舍五入到整数）
+                total_frames = int(round(target_duration * video.fps))
+                # 通过裁剪确保帧数精确
+                final_clip = adjusted_video.subclip(0, total_frames / video.fps)
+
+                # 保存调整后的视频
+                final_clip.write_videofile(
                     output_path,
                     codec="libx264",
                     audio_codec="aac",
-                    fps=video.fps
+                    fps=video.fps,
+                    audio_bitrate="192k",
+                    bitrate='6900k'
                 )
-                return True
-
-            # 计算速度因子：原时长/目标时长
-            speed_factor = original_duration / target_duration
-            print(f"计算得到的速度因子: {speed_factor:.4f}")
-
-            # 检查速度因子是否在有效范围内
-            if speed_factor <= 0 or speed_factor >= 1:
-                print(f"速度因子 {speed_factor:.4f} 超出合理范围，视频可能无法正常处理")
-                return False
-
-            # 放慢视频速度
-            adjusted_video = video.fx(vfx.speedx, factor=speed_factor)
-            print(f"调整后视频的计算时长: {original_duration / speed_factor:.2f}秒")
-            # **关键步骤：根据帧率重新计算精确的持续时间**
-            # 计算目标时长内应包含的总帧数（四舍五入到整数）
-            total_frames = int(round(target_duration * video.fps))
-            # 通过裁剪确保帧数精确
-            final_clip = adjusted_video.subclip(0, total_frames / video.fps)
-
-            # 保存调整后的视频
-            final_clip.write_videofile(
-                output_path,
-                codec="libx264",
-                audio_codec="aac",
-                fps=video.fps,
-                audio_bitrate="192k",
-                bitrate='6900k'
-            )
+            else:
+                adjusted_video = video.fx(vfx.speedx, final_duration=target_duration)
+                adjusted_video.write_videofile(output_path,
+                                               codec="libx264",
+                                               audio_codec="aac",
+                                               fps=video.fps,
+                                               audio_bitrate="192k",
+                                               bitrate='6900k')
 
             # 验证输出视频时长
             output_video = VideoFileClip(output_path)
@@ -106,12 +103,24 @@ def process_folder_videos(folder_path, duration_dict):
                 name, ext = os.path.splitext(filename)
                 output_filename = f"{name}{ext}"
                 index = name.split(".")[0]
-                target_duration = duration_dict[int(index)-1]
+                target_duration = duration_dict[int(index) - 1]
                 output_path = os.path.join(output_folder, output_filename)
 
-                # 只有时长小于目标时长的视频才需要处理
+                # 时长小于目标时长的视频
                 if original_duration < target_duration:
                     print(f"视频时长不足{target_duration}秒，进行慢速处理...")
+                    success = adjust_video_to_target_duration(
+                        input_path, output_path, target_duration
+                    )
+
+                    if success:
+                        processed_count += 1
+                        print(f"✓ 成功处理: {filename}")
+                    else:
+                        error_count += 1
+                        print(f"✗ 处理失败: {filename}")
+                elif original_duration > target_duration > 2:
+                    print(f"视频时长超过{target_duration}秒，进行加速处理...")
                     success = adjust_video_to_target_duration(
                         input_path, output_path, target_duration
                     )
