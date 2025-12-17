@@ -48,7 +48,12 @@ def adjust_video_to_target_duration(input_path, output_path, target_duration=6):
                 )
             else:
                 adjusted_video = video.fx(vfx.speedx, final_duration=target_duration)
-                adjusted_video.write_videofile(output_path,
+                # **关键步骤：根据帧率重新计算精确的持续时间**
+                # 计算目标时长内应包含的总帧数（四舍五入到整数）
+                total_frames = int(round(target_duration * video.fps))
+                # 通过裁剪确保帧数精确
+                final_clip = adjusted_video.subclip(0, total_frames / video.fps)
+                final_clip.write_videofile(output_path,
                                                codec="libx264",
                                                audio_codec="aac",
                                                fps=video.fps,
