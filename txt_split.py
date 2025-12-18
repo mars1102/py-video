@@ -66,7 +66,7 @@ def format_string(text: str, columns: List[int] = [1, 2, 3], save_dir: str = "")
                 item for item in columns_data
                 if not item.startswith('🎬') and not item.startswith('⏱️')
             ]
-            storyboard += '\n'.join(filtered_columns) + '\n'
+            storyboard += ','.join(filtered_columns) + '\n'
 
     # 确定保存目录
     if not save_dir:
