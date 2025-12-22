@@ -54,11 +54,11 @@ def adjust_video_to_target_duration(input_path, output_path, target_duration=6):
                 # 通过裁剪确保帧数精确
                 final_clip = adjusted_video.subclip(0, total_frames / video.fps)
                 final_clip.write_videofile(output_path,
-                                               codec="libx264",
-                                               audio_codec="aac",
-                                               fps=video.fps,
-                                               audio_bitrate="192k",
-                                               bitrate='6900k')
+                                           codec="libx264",
+                                           audio_codec="aac",
+                                           fps=video.fps,
+                                           audio_bitrate="192k",
+                                           bitrate='6900k')
 
             # 验证输出视频时长
             output_video = VideoFileClip(output_path)
@@ -201,6 +201,10 @@ def margeContent(split_content_arr, srt_content_dict):
     return result_arr
 
 
+# 定义要移除的中文符号和空格
+chinese_chars_pattern = r'[\s\u3000\u3001\u3002\uff01\uff0c\uff1a\uff1b\uff1f\u2018\u2019\u201c\u201d\uff08\uff09\u300a\u300b\u3008\u3009\u3010\u3011\u300e\u300f]'
+
+
 def get_duration_dict(srt_file_path, split_path):
     """
     根据字幕文件和分镜文件获取视频目标时长
@@ -215,8 +219,15 @@ def get_duration_dict(srt_file_path, split_path):
             if cleaned_line:
                 # 检查行中是否包含逗号
                 if ',' in cleaned_line:
-                    # 按逗号分割，并移除每个元素可能的空格
-                    split_items = [item.strip() for item in cleaned_line.split(',')]
+                    str_list = cleaned_line.split(',')
+
+                    split_items = []
+                    for s in str_list:
+                        # 移除中文符号
+                        cleaned = re.sub(chinese_chars_pattern, '', s)
+                        # 如果清理后不是空字符串，则添加到结果列表
+                        split_items.append(cleaned)
+
                     split_array.append(split_items)
                 else:
                     # 行内无逗号，则将整行作为一个单独元素的列表
@@ -240,7 +251,7 @@ def get_duration_dict(srt_file_path, split_path):
                 # 检查是否有时间行和中文字符行
                 if i + 2 < len(lines):
                     time_line = lines[i + 1].strip()
-                    chinese_line = lines[i + 2].strip()
+                    chinese_line = re.sub(chinese_chars_pattern, '', lines[i + 2].strip())
                     # 验证时间行格式
                     if '-->' in time_line:
                         # 提取开始和结束时间
