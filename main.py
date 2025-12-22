@@ -202,7 +202,7 @@ def margeContent(split_content_arr, srt_content_dict):
 
 
 # 定义要移除的中文符号和空格
-chinese_chars_pattern = r'[\s\u3000\u3001\u3002\uff01\uff0c\uff1a\uff1b\uff1f\u2018\u2019\u201c\u201d\uff08\uff09\u300a\u300b\u3008\u3009\u3010\u3011\u300e\u300f]'
+chinese_chars_pattern = r'[\s\u3000\u3001\u3002\uff01\uff0c\uff1a\uff1b\uff1f\u2018\u2019\u201c\u201d\uff08\uff09\u300a\u300b\u3008\u3009\u3010\u3011\u300e\u300f\uff5e~\u301c\u3030]'
 
 
 def get_duration_dict(srt_file_path, split_path):
